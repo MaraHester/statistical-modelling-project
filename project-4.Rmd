@@ -1,6 +1,6 @@
 ---
 title: "Project 4"
-author: "Wiebke Schramm, Victorio, Samory, Mara Hester"
+author: "Wiebke Schramm, Victorio Úbeda, Samory, Mara Hester"
 date: "12/5/2020"
 output:
   pdf_document:
@@ -19,8 +19,10 @@ $$E(y) = \beta_0 + \beta_1x_1 + ... + \beta_{20}x_{20}.$$
 #install.packages("MASS")
 library("readxl")
 library("MASS")
-setwd("~/Documents/LiU/Statistical Modeling/Project")
-data=read_xls("Project-1-4-data.xls")
+#setwd("~/Documents/LiU/Statistical Modeling/Project")
+# Set working directory to source file location
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+data=read_excel("project-1-4-data.xlsx")
 #view our Data 
 #View(data)
 #Summary of the data
