@@ -1,0 +1,254 @@
+---
+title: "Project 4"
+author: "Wiebke Schramm, Victorio, Samory, Mara Hester"
+date: "12/5/2020"
+output:
+  pdf_document:
+    latex_engine: xelatex
+---
+##Description
+We would like to conduct a chemical experiment with twenty predictors, $x_1,...,x_20$, where the first three are $0/1$-variables for different conditions and the remaining seventeen are amounts (proportions of some predetermined maximum level) of usage of different substances added to the process. 
+The response $y$ is the chemical yield and higher yield is better. 
+Consider the full linear model with all twenty predictors:
+$$E(y) = \beta_0 + \beta_1x_1 + ... + \beta_{20}x_{20}.$$
+**a) Explore the data by looking at different plots etc.**
+
+```{r}
+#load data
+#install.packages("readxl")
+#install.packages("MASS")
+library("readxl")
+library("MASS")
+setwd("~/Documents/LiU/Statistical Modeling/Project")
+data=read_xls("Project-1-4-data.xls")
+#view our Data 
+#View(data)
+#Summary of the data
+str(data)
+#titles
+names(data)
+attach(data)
+```
+
+```{r}
+#Plot
+#install.packages("scatterplot3d")
+library("scatterplot3d")
+# A matrix of scatterplots which includes all of the variables in the data set
+pairs(data)
+scatterplot3d(y,x1 + x2 + x3+x4+x5+x6+x7+x8+x9+x10+x11+x12+x13+x14+x15+x16+x17+x18+x19+x20 , angle = 50)
+par(mfrow=c(2,2))
+#boxplot
+boxplot(y, col = "blue")
+#histogramme
+hist(y, col = "green",breaks = 10,   main = paste("Histogram of" , "observations"))
+rug(y) #amount of observations
+hist(x10, col = "blue",breaks = 10)
+hist(x20, col = "blue",breaks = 10)
+
+# Relation: Predictor and observations
+plot(y ~ x1+x2+x3+x4+x5+x6+x7+x8+x9+x10+x11+x12+x13+x14+x15+x16+x17+x18+x19+x20)
+# par(mfrow=c(3,3))
+# plot(x4,y)
+# plot(x5,y)
+# plot(x6,y)
+# plot(x7,y)
+# plot(x8,y)
+# plot(x9,y)
+# plot(x10,y)
+# plot(x11,y)
+# plot(x12,y)
+# par(mfrow=c(3,3))
+# plot(x13,y)
+# plot(x14,y)
+# plot(x15,y)
+# plot(x16,y)
+# plot(x17,y)
+# plot(x18,y)
+# plot(x19,y)
+# plot(x20,y)
+
+#Correlation (measure of linear relation)
+cor(subset(data, select=-id))
+
+```
+Correlation between x1 and x2 is -0.03 and correlation between x1 and y is -0.025 (larger). It shouldnt be smaller.
+
+**(b) Split the data set (n = 400) into a training set and a test set.**
+```{r}
+train.size = dim(data)[1]/2
+train = sort(sample(1:dim(data)[1], train.size))
+test = -train
+
+data.train = data[train, ]
+data.test = data[test, ]
+y.test = y[test]
+x=x1 + x2 + x3+x4+x5+x6+x7+x8+x9+x10+x11+x12+x13+x14+x15+x16+x17+x18+x19+x20
+x.test = x[test]
+y.train = y[train]
+x.train = x[train]
+
+#data1 = sort(sample(nrow(data), nrow(data)*(2/3)))
+#train_data =data[data1,] 
+#test_data=data[-data1,]
+```
+
+**(c) Fit the full model using least squares on the training set, and report the test error obtained.**
+```{r}
+lm=lm(y ~ x1+x2+x3+x4+x5+x6+x7+x8+x9+x10+x11+x12+x13+x14+x15+x16+x17+x18+x19+x20, data=data.train)
+summary(lm)
+par(mfrow=c(2,2))
+plot(lm) #produce diagnostic plots of the least squares regression fit
+
+lm1 = lm(y~.-id, data=data)
+summary(lm1)
+
+# Logistic regression
+glm= glm(y ~ x1+x2+x3+x4+x5+x6+x7+x8+x9+x10+x11+x12+x13+x14+x15+x16+x17+x18+x19+x20, data=data.train,
+    family = gaussian)
+glm.probs = predict(glm, data.test, type = "response")
+glm.pred = rep(0, length(glm.probs))
+glm.pred[glm.probs > 0.5] = 1
+mean(glm.pred != y.test)
+
+
+```
+report the test error obtained (see 4.11b))
+there is some evidence of non-linearity.
+
+**(d) Find a suitable linear model by subset / stepwise selection.**
+
+**1. Best Subset Selection:**
+```{r}
+#First Subset selection
+#install.packages("leaps")
+library(leaps)
+sum(is.na(data)) #identify the missing observations
+#best supset selection:
+regfit.full = regsubsets(y ~ x1+x2+x3+x4+x5+x6+x7+x8+x9+x10+x11+x12+x13+x14+x15+x16+x17+x18+x19+x20, data = data.test, nvmax = 20) #identifying the best model that contains a given number of predictors (using RSS). (400 data)
+regfit.summary=summary(regfit.full) #best set of variables for each model size.
+```
+We use the regsubsets() function to find the best subset selection. The function identifies the best model that contains a given number of predictors. The best is quantified using residual sum of squares (RSS): 
+$$RSS = e_1^2 + e_2^2 + · · · + e_n^2$$ with residual $e_i=y_i-\hat{y}_i$ (difference between the $i$th observed response value and the $i$th response value that is predicted by our linear model).
+In the summary() we can see the best set of variables for each model size. An asterisk * indicates that a given variable is included in the corresponding model. For instance, this output indicates that the best two-variable model containts only $x_4$ and  $x_8$.
+Now we will have a look at the return of the summary.
+```{r}
+names(regfit.summary) #returns R^2, RSS, adjusted R2, Cp, and BIC.
+regfit.summary$rsq #R^2
+```
+$R^2$ statistic increases from 51 %, when only one variable is included in the model, to almost 96%, when all variables are included. As expected, the R2 statistic increases strongly monotonically as more variables are included. Plotting RSS, adjusted $R^2$, $C_p$, and BIC for all of the models at once will help us decide which model to select. 
+```{r}
+#Plot for deciding the best model
+par(mfrow=c(2,2))
+#RSS
+plot(regfit.summary$rss ,xlab="Number of Variables ",ylab="RSS", type="l") #type=l for lines 
+
+#adjr2
+plot(regfit.summary$adjr2 ,xlab="Number of Variables ", ylab="Adjusted RSq",type="l")
+#Mark the maximum point on the adjusted Rs_q
+which.max(regfit.summary$adjr2) #maximum point of the vector
+points(10,regfit.summary$adjr2[10], col="blue",pch=20) #blue point
+
+#Cp
+plot(regfit.summary$cp ,xlab="Number of Variables ",ylab="Cp", type="l")
+#Mark the minimum
+which.min(regfit.summary$cp )
+points(8,regfit.summary$cp [8],col="blue",pch=20)
+
+#BIC
+plot(regfit.summary$bic ,xlab="Number of Variables ",ylab="BIC",type="l")
+which.min(regfit.summary$bic )
+points(7,regfit.summary$bic [7],col="blue",pch=20)
+
+#Plots a table of models showing which variables are in each model
+#can used to display the selected variables for the best model with a given number of predictors, ranked according to
+plot(regfit.full,scale="r2",main="R2")
+plot(regfit.full,scale="adjr2",main="adjr2") 
+plot(regfit.full,scale="Cp",main="Cp") 
+plot(regfit.full,scale="bic",main="BIC") 
+```
+
+The top row of each plot contains a black square for each variable selected according to the optimal model associated with that statistic. For instance, we see that several models share a BIC close to −550. However, the model with the lowest BIC is the seven-variable model that contains only $x_2,x_4,x_7,x_8,x_9,x_10,x_14$.
+```{r}
+#Coefficient estimates associated with this model
+coef(regfit.full ,7)
+```
+**2. Forward and Backward Stepwise Selection**
+```{r}
+#forward
+regfit.forward=regsubsets (y ~ x1 +x2+x3+x4+x5+x6+x7+x8+x9+x10+x11+x12+x13+x14+x15+x16+x17+x18+x19+x20, data=data ,nvmax=20, method ="forward")
+summary(regfit.forward)
+coef(regfit.forward,7)
+```
+For forward stepwise selection the best one-variable model contains only $x_{20}$, and the best two-variable model additionally includes $x_4$.
+
+```{r}
+#backward
+regfit.backward=regsubsets (y ~ x1 + x2+x3+x4+x5+x6+x7+x8+x9+x10+x11+x12+x13+x14+x15+x16+x17+x18+x19+x20,data=data ,nvmax=20,method ="backward")
+summary(regfit.backward)
+coef(regfit.backward,7)
+```
+
+
+**(e) Fit a PLS model on the training set, with M chosen by cross-validation. Report the test error obtained, along with the value of M selected by cross-validation. **
+We implement partial least squares (PLS) using the plsr() function.
+
+
+We now try to choose among the models of different sizes using cross-validation.
+*What is Cross-validation?* It can be used to estimate the test error associated with a given statistical learning method in order to evaluate its performance, or to select the appropriate level of flexibility. The CV score is provided for each possible number of components, ranging from M = 0 onward.
+
+```{r}
+#install.packages("pls")
+library(pls)
+set.seed (1)
+pls.fit=plsr(y ~x1 + x2+x3+x4+x5+x6+x7+x8+x9+x10+x11+x12+x13+x14+x15+x16+x17+x18+x19+x20, data=data.train ,subset=test,scale=TRUE,validation="CV")
+#scale=TRUE has the effect of standardizing each predictor
+#validation="CV": to compute the ten-fold cross-validation error for each possible value of M 
+summary(pls.fit) #result
+validationplot(pls.fit, val.type="MSEP")
+```
+The lowest cross-validation error occurs when only M = 15 partial least squares directions are used. We now evaluate the corresponding test set MSE.
+
+```{r}
+pls.pred = predict(pls.fit, data.test, ncomp=16)
+mean((data.test[,"y"] - data.frame(pls.pred))^2)
+```
+The test MSE is comparable to, but slightly higher than, the test MSE obtained using ridge regression, the lasso, and PCR.
+Finally, we perform PLS using the full data set, using M = 10, the number of components identified by cross-validation.
+
+```{r}
+pls.fit=plsr(y~x1 + x2+x3+x4+x5+x6+x7+x8+x9+x10+x11+x12+x13+x14+x15+x16+x17+x18+x19+x20, data=data ,scale=TRUE,ncomp=10)
+summary(pls.fit)
+```
+The percentage of variance in y that the ten-component PLS fit explains is 96.08 %.
+*Difference between PCR and PLS:*
+PCR only attempts to maximize the amount of variance explained in the predictors, while PLS searches for directions that explain variance in both the predictors and the response.
+
+
+**(f) Consider your proposed models. Examine the residuals to look for any systematic effects.**
+```{r}
+```
+
+**(g) Comment on the results obtained. How accurately can we predict the response variable? Is there much difference among the test errors resulting from the different approaches? **
+
+
+**(h) Write a 10 min presentation explaining your model, analysis method (e) and results.**
+
+
+
+
+
+
+
+
+DRAFT:
+
+Here we must only use the training observations to perform all aspects of model-fitting—including variable selection. Therefore, the determination of which model of a given size is best must be made using only the *training observations*. (If the full data set is used, the validation set errors and cross-validation errors will not be accurate estimates of the test error)
+We create the train set like: the elements are equal to TRUE if the corresponding observation is in the training set and FALSE otherwise. Same for test vector. 
+```{r}
+set.seed (1) #random seed
+train.pls=sample(c(TRUE,FALSE), nrow(data),rep=TRUE)
+test.pls =(!train ) #create test causes TRUEs to be switched to FALSEs and vice versa
+#perform best subset selection:
+regfit.best=regsubsets(y~x1+x2+x3+x4+x5+x6+x7+x8+x9+x10+x11+x12+x13+x14+x15+x16+x17+x18+x19+x20,data=data[train.pls,], nvmax =20)
+```
